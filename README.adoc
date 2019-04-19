@@ -5,22 +5,22 @@
 //
 // Contributors:
 //     IBM Corporation
-:projectid: rest-client-angularjs
+:projectid: rest-client-angular
 :page-layout: guide-multipane
 :page-duration: 20 minutes
-:page-description: Explore how to access a simple RESTful web service and consume its resources with AngularJS in Open Liberty.
+:page-description: Explore how to access a simple RESTful web service and consume its resources with Angular in Open Liberty.
 :page-releasedate: 2017-11-20
 :page-related-guides: ['rest-intro', 'rest-client-java']
 :page-permalink: /guides/{projectid}
 :common-includes: https://raw.githubusercontent.com/OpenLiberty/guides-common/master
 :source-highlighter: prettify
 :guide-author: Open Liberty
-= Consuming a RESTful web service with AngularJS
+= Consuming a RESTful web service with Angular
 
 [.hidden]
 NOTE: This repository contains the guide documentation source. To view the guide in published form, view it on the https://openliberty.io/guides/{projectid}.html[Open Liberty website].
 
-Explore how to access a simple RESTful web service and consume its resources with AngularJS in Open
+Explore how to access a simple RESTful web service and consume its resources with Angular in Open
 Liberty.
 
 // =================================================================================================
@@ -30,10 +30,13 @@ Liberty.
 == What you'll learn
 
 You will learn how to access a REST service and deserialize the returned JSON that contains a list of
-artists and their albums by using the high-level `$resource` service of AngularJS.
+artists and their albums by using an Angular service and the Angular HTTP Client.
 
 The REST service that provides the artists and albums resource was written for you in advance and
-responds with the [hotspot]`artists.json`.
+responds with the [hotspot]`artists.json`. 
+
+The Angular application has been created and configured for you in the `frontend` directory. It
+contains the default starter page.
 
 artists.json
 [source, json, linenums, role="code_column"]
@@ -41,8 +44,8 @@ artists.json
 include::finish/src/resources/artists.json[]
 ----
 
-You will implement an AngularJS client that consumes this JSON and displays its contents at the
-following URL: `\http://localhost:9080`.
+You will implement an Angular client that consumes this JSON and displays its contents at the
+following URL: `\http://localhost:9080/app`.
 
 
 To learn more about REST services and how you can write them, see
@@ -76,94 +79,107 @@ mvn install liberty:start-server
 After you start the server, you can find your artist JSON at the following URL: http://localhost:9080/artists[http://localhost:9080/artists^].
 
 
-Any local changes to your JavaScript and HTML are picked up automatically. After you start the Open
-Liberty server, you do not need to restart it.
+Any local changes to your JavaScript and HTML are picked up when you build the frontend. 
+After you start the Open Liberty server, you do not need to restart it.
 
 
 // =================================================================================================
 // Guide
 // =================================================================================================
 
-== Creating the AngularJS controller
+== Importing the HTTP client
 
 Navigate to the start directory to begin. 
 
-Begin by registering your application module. Every application must contain at least one module, the
-application module, which will be bootstrapped to launch the application.
+Your application will need some way of communicating with RESTful web services in order to retrieve their resources.
+In the case of this guide, your application will need to communicate with the artists service to retrieve the artists JSON.
+While there exists a variety of ways of doing this, you can use the included Angular HTTP Client module.
 
+Begin by importing the Angular HTTP Client module into your application module. 
 
 [role="code_command hotspot", subs="quotes"]
 ----
-#Create the `consume-rest` file.#
-`src/main/webapp/js/consume-rest.js`
+#Update the `app.module.ts` file.#
+`src/main/frontend/src/app/app.module.ts`
 ----
 
-consume-rest.js
+app.module.ts
 [source, javascript, linenums, role="code_column"]
 ----
-include::finish/src/main/webapp/js/consume-rest.js[tags=**]
+include::finish/src/main/frontend/src/app/app.module.ts[tags=**]
 ----
 
-The application module is defined by [hotspot=1]`consumeRestApp`.
+In Angular, a module declares all modules that it imports or exports. Angular applications
+can have many modules; AppModule is the root module, and most apps import `HttpClientModule` here.
 
-Your application will need some way of communicating with RESTful web services in order to retrieve their resources.
-In the case of this guide, your application will need to communicate with the artists service to retrieve the artists JSON.
-While there exists a variety of ways of doing this, you can use the fairly straightforward AngularJS
-[hotspot=3]`$resource` service.
+Import the [hotspot=3]`HttpClientModule` class and update the [hotspot=11-14]`imports` array within the 
+[hotspot=7-17]`@NgModule` declaration to include [hotspot=13]`HttpClientModule`.
 
-The [hotspot=1]`ngResource` module is registered as it is appended after [hotspot=1]`consumeRestApp`. By registering another module, you are performing a dependency injection, exposing all functionalities
-of that module to your main application module.
+== Creating the Angular component
 
-Next, the [hotspot=3-5]`Artists` AngularJS service is defined by using the Factory recipe. The Factory recipe constructs a new service instance with the return value of a passed in function. In this case,
-the [hotspot=3]`$resource` module that you imported earlier is the passed in function. Target the artist JSON
-URL in the [hotspot=4]`$resource()` call. 
+You will create the component in your application used to acquire and display data from the REST API. This file will contain
+two classes: the service, which will handle data access, and the component itself, which will handle presenting the data.
+The default Angular application already contains a component.
 
-
-The [hotspot=7-13]`controller` controls the flow of data in your application.Each controller is instantiated with
-its own isolated scope, accessible through the [hotspot=9]`$scope` parameter. All data that is bound to this
-parameter is available in the view to which the controller is attached.
-
-You can now access the `artists` property from the template at the point in the Document Object
-Model (DOM) where the controller is registered.
-
-
-== Creating the AngularJS template
-
-You will create the starting point of your application.
-This file will contain all elements and attributes specific to AngularJS.
-
-[role="code_command hotspot file=0", subs="quotes"]
+[role="code_command hotspot", subs="quotes"]
 ----
-#Create the starting point of your application.#
-`src/main/webapp/index.html`
+#Update the `app.component.ts` file.#
+`src/main/frontend/src/app/app.component.ts`
 ----
 
-index.html
+app.component.ts
+[source, javascript, linenums, role="code_column"]
+----
+include::finish/src/main/frontend/src/app/app.component.ts[tags=**]
+----
+
+First, import two classes you'll need for the service: [hotspot=2]`HttpClient` and [hotspot=3]`Injectable`. 
+
+Next, define the [hotspot=5-20]`ArtistsService` class. You can do this in a separate file, or in the same file as the component. The class is annotated [hotspot=5]`@Injectable` so that instances of it can be provided to 
+other classes which need to use it. 
+
+The class injects an instance of the [hotspot=7]`HttpClient` class which it will use to request data 
+from the REST API. It contains a constant [hotspot=9]`ARTISTS_URL` which points to the API endpoint it will
+request data from. Finally, it implements a method [hotspot=11-18]`fetchArtists()` that makes the request
+and returns the result.
+
+To obtain the data for display on the page, `fetchArtists()` Tries to use the injected [hotspot=13]`http` instance to perform a `GET` HTTP request to the [hotspot=9]`ARTISTS_URL` and returning the result. If an error occurs,
+it prints the message of the error to the console. 
+
+[hotspot=11-18]`fetchArtists()` uses a feature of Javascript called [hotspot=11]`async` and [hotspot=13]`await` to make the request and receive the response
+without preventing the application from working while it waits. In order to be compatible with this feature,
+the result of the [hotspot=13]`HttpClient.get()` method must be converted to a Promise using `toPromise()`.
+
+Finally, update the [hotspot=22-37]`AppComponent` class to use this service. 
+
+Add a [hotspot=25]`providers` property to the [hotspot=22-27]`@Component` annotation to indicate that this component provides the [hotspot=5-18]`ArtistsService` to the rest of the application. 
+
+Create a class member [hotspot=29]`artists` of type `any[]` and initialize it to an empty array. This will hold the artists retrieved from the service so the template can display them.
+
+Inject an instance of the [hotspot=31]`ArtistsService` class into the constructor. In [hotspot=33-37]`ngOnInit`, the method called when a component is ready to be displayed, use the [hotspot=34]`artistsService` instance to request the artists data. Since [hotspot=11-18]`fetchArtists()` is an `async` function, it will return a Promise. To retrieve the data from the request, call [hotspot=34-36]`then()` on the promise and provide a function that will take in the data and store it to the `artists` class member.
+
+== Creating the Angular component template
+
+Now that you are fetching the data and storing it within your component, you will display the data in the browser.
+
+[role="code_command hotspot", subs="quotes"]
+----
+#Create the template of your component.#
+`src/main/frontend/src/app/app.component.html`
+----
+
+app.component.html
 [source, html, linenums, role="code_column"]
 ----
-include::finish/src/main/webapp/index.html[tags=html]
+include::finish/src/main/frontend/src/app/app.component.html[tags=html]
 ----
 
-consume-rest.js
-[source, javascript, linenums, role="code_column"]
-----
-include::finish/src/main/webapp/js/consume-rest.js[tags=**]
-----
+The Angular application is already set up to display the contents of this file. Replace the Angular
+"Hello" HTML with a [hotspot=1]`div` that is repeated using `*ngFor` to iterate over all artists. The `artists` variable
+is bound to the `artists` member of the component. Use the same strategy to iterate over each [hotspot=3]`album` for the
+artist.
 
-Before your application is bootstrapped, you must pull in two [hotspot=4-9 file=0]`AngularJS` libraries and import [hotspot=10 file=0]`consume-rest.js`.
-
-The first import is the base AngularJS library. The second library is responsible for providing the APIs
-for the `$resource` service. The application is bootstrapped because the [hotspot=12 file=0]`consumeRestApp` application module is attached to the [hotspot=12-25 file=0]`body` of the template.
-
-Next, the [hotspot=13 file=0]`ArtistCtrl` controller is attached to the DOM to create a new child scope. The controller will make the
-[hotspot=9 file=1]`artists` property of the [hotspot=9 file=1]`$scope` object available to access at the point in the DOM where the
-controller is attached.
-
-Once the controller is attached, the [hotspot=14 file=0]`artists` property can be data-bounded to the template and accessed
-using the [hotspot=15 file=0]`{{ artists }}` expression. You can use the [hotspot=14 file=0]`ng-repeat` directive to iterate over the contents
-of the [hotspot=14 file=0]`artists` property.
-
-After everything is set up, point your browser to the application root http://localhost:9080[http://localhost:9080^] to
+After everything is set up, point your browser to the web application root http://localhost:9080/app[http://localhost:9080/app^] to
 see the following output:
 
 [subs="quotes", role="no_copy"]
@@ -181,9 +197,13 @@ dj wrote 0 albums:
 
 No explicit code directly uses the consumed artist JSON, so you do not need to write any test cases for this guide.
 
-Whenever you change your AngularJS implementation, the application root at http://localhost:9080[http://localhost:9080^] will
+Whenever you change and build your Angular implementation, the application root at http://localhost:9080/app[http://localhost:9080/app^] will
 reflect the changes automatically. You can visit the root to manually check whether the artist JSON
-was consumed correctly.
+was consumed correctly. You can rebuild only your Angular frontend by running the following command:
+[role='command']
+```
+mvn generate-resources
+```
 
 When you are done checking the application root, stop the Open Liberty server by running the following command:
 [role='command']
@@ -194,13 +214,13 @@ mvn liberty:stop-server
 Although this guide did not teach you how to build logic, you will likely build logic when you develop your own
 applications, and testing will become a crucial part of your development lifecycle. If you need
 to write test cases, follow the official unit testing and end-to-end testing documentation on the
-https://docs.angularjs.org/guide/unit-testing[official AngularJS page^].
+https://angular.io/guide/testing[official Angular page^].
 
 
 
 == Great work! You're done!
 
-You have just accessed a simple RESTful web service and consumed its resources by using AngularJS in
+You have just accessed a simple RESTful web service and consumed its resources by using Angular in
 Open Liberty.
 
 include::{common-includes}/attribution.adoc[subs="attributes"]
