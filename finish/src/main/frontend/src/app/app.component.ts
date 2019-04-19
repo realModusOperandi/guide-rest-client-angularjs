@@ -6,11 +6,11 @@ import { Injectable } from '@angular/core';
 export class ArtistsService {
   constructor(private http: HttpClient) { }
 
-  configUrl = 'http://localhost:9080/artists';
+  private static ARTISTS_URL = 'http://localhost:9080/artists';
 
   async fetchArtists() {
     try {
-      let data: any = await this.http.get('http://localhost:9080/artists').toPromise();
+      let data: any = await this.http.get(ArtistsService.ARTISTS_URL).toPromise();
       return data;
     } catch (error) {
       console.error(`Error occurred: ${error}`);
